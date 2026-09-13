@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "lea-cv-qr-api",
+  "main": "worker/api.ts",
+  "compatibility_date": "2026-09-13",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "kv_namespaces": [
+    {
+      "binding": "CV_FILES",
+      "id": "ea1afd9504df4267a1664e1e00d057dd"
+    }
+  ],
+  "vars": {
+    "ALLOWED_ORIGINS": "https://marcusduteil.github.io",
+    "PUBLIC_BASE_URL": "https://lea-cv-qr-api.lea-cv-qr-generator.workers.dev"
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.01
+    }
+  }
+}

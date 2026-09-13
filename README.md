@@ -9,22 +9,22 @@ et de télécharger le QR code correspondant.
 2. Le navigateur vérifie le type, la taille et la signature `%PDF-`.
 3. Cloudflare Turnstile protège l’envoi contre les robots.
 4. Le Worker répète toutes les validations et refuse les fonctions PDF actives.
-5. Le CV est stocké dans un bucket R2 privé sous un identifiant aléatoire.
+5. Le CV est stocké dans Workers KV sous un identifiant aléatoire.
 6. Le QR code contient l’URL temporaire servie par le Worker.
-7. Le propriétaire peut supprimer immédiatement le fichier avec un jeton secret.
-8. L’accès expire après 30 jours, même si le nettoyage physique n’a pas encore tourné.
+7. Le propriétaire peut demander sa suppression avec un jeton secret.
+8. KV supprime automatiquement le document après 30 jours.
 
 ## Architecture
 
 - `github-pages/` : façade statique publiée sur GitHub Pages.
 - `components/CvQrGenerator.tsx` : interface partagée.
-- `worker/index.ts` : upload, validation Turnstile, consultation et suppression.
-- `CV_FILES` : binding R2 privé pour les PDF.
+- `worker/api.ts` : upload, validation Turnstile, consultation et suppression.
+- `CV_FILES` : espace Workers KV gratuit pour les PDF temporaires.
 - `.github/workflows/deploy-pages.yml` : publication automatique de la façade.
 - `public/og.png` : carte de partage du site.
 
-Le site complet peut également être exécuté ou déployé comme une application
-Cloudflare/vinext. Dans ce cas, la façade et l’API utilisent la même origine.
+La façade est hébergée gratuitement par GitHub Pages. Seule l’API est déployée
+sur le forfait gratuit Cloudflare Workers.
 
 ## Développement local
 
@@ -50,26 +50,24 @@ variables uniquement dans l’environnement du Worker :
 
 ```text
 TURNSTILE_SECRET_KEY=<secret Cloudflare, jamais dans GitHub>
-ALLOWED_ORIGINS=https://UTILISATEUR.github.io
-PUBLIC_BASE_URL=https://URL-DU-WORKER
+ALLOWED_ORIGINS=https://marcusduteil.github.io
+PUBLIC_BASE_URL=https://lea-cv-qr-api.lea-cv-qr-generator.workers.dev
 ```
 
-Le binding R2 doit s’appeler `CV_FILES`. Le bucket doit rester privé : tous les
-PDF sont servis par `/cv/:id`, qui ajoute `noindex`, `nosniff`, une CSP sandboxée
-et contrôle la date d’expiration.
-
-Configurer aussi une règle de cycle de vie R2 supprimant les objets du préfixe
-`cv/` après 30 jours. Le Worker bloque déjà leur lecture après cette date ; la
-règle garantit la suppression physique du stockage.
+Le binding KV déclaré dans `wrangler.api.jsonc` s’appelle `CV_FILES` et pointe
+vers l’espace `lea-cv-files`.
+Chaque PDF est écrit avec un TTL de 30 jours : KV le supprime automatiquement.
+Les documents sont servis uniquement par `/cv/:id`, avec `noindex`, `nosniff`
+et une CSP sandboxée.
 
 ### 2. Façade GitHub Pages
 
-Dans `Settings → Secrets and variables → Actions → Variables`, ajouter :
+Les valeurs publiques sont intégrées au workflow GitHub Actions :
 
 ```text
-UPLOAD_API_URL=https://URL-DU-WORKER
-TURNSTILE_SITE_KEY=<clé publique du widget>
-SITE_URL=https://UTILISATEUR.github.io/NOM-DU-DEPOT
+UPLOAD_API_URL=https://lea-cv-qr-api.lea-cv-qr-generator.workers.dev
+TURNSTILE_SITE_KEY=clé publique du widget Turnstile
+SITE_URL=https://marcusduteil.github.io/lea_would_you-_mary_me
 ```
 
 Dans `Settings → Pages → Build and deployment`, choisir **GitHub Actions**.
@@ -81,6 +79,8 @@ Chaque push sur `main` construit ensuite la façade et la publie automatiquement
 npm run dev          # aperçu de l’application complète
 npm run build        # compilation Worker/vinext
 npm run build:pages  # compilation de la façade GitHub Pages dans docs/
+npm run dev:api      # API Worker locale uniquement
+npm run deploy:api   # déploiement de l’API Cloudflare
 npm test             # compilation et contrôles automatisés
 npm run lint         # qualité TypeScript/React
 ```
@@ -89,11 +89,14 @@ npm run lint         # qualité TypeScript/React
 
 - Le QR code ne contient jamais le PDF, seulement son URL aléatoire.
 - Les secrets Turnstile restent côté serveur.
-- Le jeton de suppression n’est stocké dans R2 que sous forme de hash SHA-256.
-- Les noms de fichiers sont normalisés et les clés R2 ne reprennent pas le nom du CV.
+- Le jeton de suppression n’est stocké dans KV que sous forme de hash SHA-256.
+- Les noms de fichiers sont normalisés et les clés KV ne reprennent pas le nom du CV.
 - Les PDF contenant JavaScript, lancement d’action, média riche ou pièce jointe
   intégrée sont refusés.
-- Les CV ne doivent pas être placés dans un bucket R2 public.
+- Le forfait gratuit KV offre 1 Go de stockage, 1 000 écritures et 100 000
+  lectures par jour. Une limite atteinte provoque un refus, pas une facturation.
+- KV est distribué et éventuellement cohérent : un nouveau lien ou une suppression
+  peut demander jusqu’à environ 60 secondes pour être visible partout.
 - Pour une ouverture au grand public à grande échelle, ajouter une véritable
   analyse antivirus et une politique de signalement des contenus abusifs.
 

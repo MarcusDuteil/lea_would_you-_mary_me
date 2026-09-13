@@ -31,16 +31,18 @@ test("server-renders the CV QR generator", async () => {
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
 });
 
-test("declares storage and GitHub Pages delivery", async () => {
-  const [hosting, packageJson, workflow, component, worker] = await Promise.all([
-    readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
+test("declares KV storage and GitHub Pages delivery", async () => {
+  const [wrangler, packageJson, workflow, component, worker] = await Promise.all([
+    readFile(new URL("../wrangler.api.jsonc", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../.github/workflows/deploy-pages.yml", import.meta.url), "utf8"),
     readFile(new URL("../components/CvQrGenerator.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../worker/api.ts", import.meta.url), "utf8"),
   ]);
 
-  assert.equal(JSON.parse(hosting).r2, "CV_FILES");
+  const workerConfig = JSON.parse(wrangler);
+  assert.equal(workerConfig.kv_namespaces[0].binding, "CV_FILES");
+  assert.equal(workerConfig.kv_namespaces[0].id, "ea1afd9504df4267a1664e1e00d057dd");
   assert.match(packageJson, /"qrcode": "\^1\.5\.4"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   assert.match(workflow, /actions\/deploy-pages@v4/);
@@ -48,4 +50,5 @@ test("declares storage and GitHub Pages delivery", async () => {
   assert.match(worker, /verifyTurnstile/);
   assert.match(worker, /X-Robots-Tag/);
   assert.match(worker, /deleteTokenHash/);
+  assert.match(worker, /expirationTtl: RETENTION_SECONDS/);
 });

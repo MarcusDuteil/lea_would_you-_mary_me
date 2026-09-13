@@ -30,9 +30,9 @@ jobs:
       - name: Construire le site public
         run: npm run build:pages
         env:
-          VITE_UPLOAD_API_URL: ${{ vars.UPLOAD_API_URL }}
-          VITE_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
-          VITE_SITE_URL: ${{ vars.SITE_URL }}
+          VITE_UPLOAD_API_URL: https://lea-cv-qr-api.lea-cv-qr-generator.workers.dev
+          VITE_TURNSTILE_SITE_KEY: 0x4AAAAAAEzDVokcNNXkC5OE
+          VITE_SITE_URL: https://marcusduteil.github.io/lea_would_you-_mary_me
       - name: Configurer GitHub Pages
         uses: actions/configure-pages@v5
       - name: Préparer l’archive Pages
