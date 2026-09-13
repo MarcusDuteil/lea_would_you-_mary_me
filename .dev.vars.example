@@ -1,0 +1,3 @@
+TURNSTILE_SECRET_KEY=
+ALLOWED_ORIGINS=http://localhost:3000,https://YOUR-GITHUB-USER.github.io
+PUBLIC_BASE_URL=http://localhost:3000
