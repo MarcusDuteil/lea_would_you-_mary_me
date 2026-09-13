@@ -35,6 +35,8 @@ jobs:
           VITE_SITE_URL: https://marcusduteil.github.io/lea_would_you-_mary_me
       - name: Configurer GitHub Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - name: Préparer l’archive Pages
         uses: actions/upload-pages-artifact@v4
         with:
